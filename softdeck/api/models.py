@@ -3,6 +3,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from datetime import date
+from django.conf import settings
+import uuid
 
 def validate_age(birth_date):
     """
@@ -42,3 +44,74 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class Project(models.Model):
+    TYPE_CHOICES = [
+        ("BACKEND", "Back-end"),
+        ("FRONTEND", "Front-end"),
+        ("IOS", "iOS"),
+        ("ANDROID", "Android")
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_projects")
+
+    def __str__(self):
+        return self.title
+
+
+class Contributor(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="contributors")
+
+    class Meta:
+        unique_together = ("user", "project")
+
+    def __str__(self):
+        return f"{self.user.username} → ({self.project.title})"
+
+
+class Issue(models.Model):
+    PRIORITY_CHOICES = [
+        ("LOW", "Low"),
+        ("MEDIUM", "Medium"),
+        ("HIGH", "High")
+    ]
+    TAG_CHOICES = [
+        ("BUG", "Bug"),
+        ("FEATURE", "Feature"),
+        ("TASK", "Task")
+    ]
+    STATUS_CHOICES = [
+        ("TODO", "To do"),
+        ("IN_PROGRESS", "In progress"),
+        ("FINISHED", "Finished")
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
+    tag = models.CharField(max_length=10, choices=TAG_CHOICES)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="issues")
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assigned_issues")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_issues")
+    created_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title}, créé le ({self.created_time})"
+
+
+class Comment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    description = models.TextField(blank=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_comments")
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name="comments")
+    created_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Commentaire de {self.author.username} sur l'issue {self.issue.title}"
+
