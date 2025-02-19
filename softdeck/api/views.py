@@ -9,17 +9,16 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Auth
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Serializer for obtaining a customized token pair for authentication.
+    Custom serializer for obtaining a token pair.
 
-    This class extends the default TokenObtainPairSerializer to include
-    additional user data in the access token payload. The purpose of this
-    serializer is to customize the structure of the token and include
-    specific user-related information, such as username, in the token payload.
-    This enhancement allows clients consuming the token to retrieve additional
-    metadata directly from the token.
+    This class extends the TokenObtainPairSerializer to include additional
+    custom claims in the token payload. It modifies the token to embed
+    the username of the authenticated user directly in the token, in addition
+    to the standard claims provided by the base serializer.
 
-    :cvar username: Adds the username of the authenticated user to the token payload.
-    :type username: str
+    :ivar token: Instance containing the generated token with standard
+        claims as well as additional custom claims.
+    :type token: dict
     """
     @classmethod
     def get_token(cls, user):
@@ -30,23 +29,32 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Class that provides custom token obtain pair functionality.
+    Provides a customized view for obtaining JWT tokens.
 
-    This class is a customized version of the TokenObtainPairView from the
-    REST framework's SimpleJWT package. It uses a custom serializer to
-    override or extend the default behavior for token pair generation,
-    which includes creating access and refresh tokens for authentication.
-    Typically useful when some extra context or rules need to be applied
-    while obtaining tokens in your application.
+    This class extends the `TokenObtainPairView` to utilize a custom serializer
+    for generating JWT token pairs. The custom serializer can add additional
+    custom logic or include extra fields in the response. Useful for scenarios
+    where standard JWT generation needs to be tailored to application-specific
+    requirements.
 
-    :ivar serializer_class: Serializer used to handle the processing of token
-        obtain requests.
-    :type serializer_class: type
+    :ivar serializer_class: The serializer class responsible for customizing
+        the JWT token pair response.
+    :type serializer_class: Type[TokenObtainPairSerializer]
     """
     serializer_class = CustomTokenObtainPairSerializer
 
 
 class IsAuthorOrReadOnly(permissions.BasePermission):
+    """
+    Permission class to allow read-only access for any user and write access only to the object's author.
+
+    This class details permission settings. It permits safe HTTP methods such as GET for all users while
+    restricting write actions like PUT, PATCH, and DELETE solely to the author of the object.
+
+    :ivar SAFE_METHODS: Tuple of safe HTTP methods (e.g., GET, HEAD, OPTIONS) that are accessible to
+        all users.
+    :type SAFE_METHODS: tuple
+    """
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True # Allows GET
@@ -55,24 +63,20 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
 
 class RegisterUserView(generics.CreateAPIView):
     """
-    Provides a summary of actions related to user registration.
+    Handles the creation of a new user account.
 
-    This class-based view inherits from generics.CreateAPIView
-    and is used to handle user registration. It allows public
-    access to create a user instance using the provided serializer.
-    The primary purpose is to expose an endpoint for creating new
-    user records in the system without authentication.
+    This class provides functionality to register a new user by creating an entry
+    in the user database. It is a subclass of `generics.CreateAPIView` and
+    leverages its behavior to handle POST requests for creating user records.
+    It restricts access using the specified permissions and applies a serializer
+    to handle data validation and user creation logic.
 
-    :ivar permission_classes: Specifies the permission classes
-        required for the view. This is unrestricted access in this
-        case, as AllowAny is used.
-    :type permission_classes: List[type]
-    :ivar queryset: Defines the queryset for fetching user objects.
-        It queries all CustomUser instances.
+    :ivar permission_classes: List of permissions required to access this view.
+    :type permission_classes: list
+    :ivar queryset: Queryset specifying the set of records this view will act upon.
     :type queryset: QuerySet
-    :ivar serializer_class: Specifies the serializer used for
-        creating new user instances.
-    :type serializer_class: type
+    :ivar serializer_class: Serializer class used to validate and serialize input data.
+    :type serializer_class: Serializer
     """
     permission_classes = [AllowAny]
     queryset = CustomUser.objects.all()
@@ -81,23 +85,22 @@ class RegisterUserView(generics.CreateAPIView):
 
 class UserListView(generics.ListAPIView):
     """
-    Represents a view for listing all users.
+    Represents a view for listing user data.
 
-    This class-based view is used to handle HTTP GET requests and provides
-    a way to retrieve a serialized list of all user objects. It exposes the
-    data through a user-specified serializer and applies the defined
-    permissions to access the endpoint. This view is read-only and does not
-    perform create, update, or delete operations.
+    This class-based view provides an interface for listing user data using
+    Django REST Framework. It utilizes generic ListAPIView to handle retrieval
+    of user data. Access to this view is restricted to users with admin
+    permissions. User data is serialized using a custom serializer.
 
-    :ivar permission_classes: Defines access permission classes that allow
-        unrestricted access to this endpoint.
+    :ivar permission_classes: Specifies the permission classes required to
+        access this view.
     :type permission_classes: list
-    :ivar queryset: Represents the queryset of all `CustomUser` objects
+    :ivar queryset: Defines the queryset to retrieve CustomUser objects
         from the database.
     :type queryset: QuerySet
-    :ivar serializer_class: Specifies the serializer class used to control
-        the representation of the `CustomUser` objects in the response.
-    :type serializer_class: type
+    :ivar serializer_class: Specifies the serializer class used to serialize
+        the user data.
+    :type serializer_class: Serializer
     """
     permission_classes = [permissions.IsAdminUser]
     queryset = CustomUser.objects.all()
@@ -106,22 +109,19 @@ class UserListView(generics.ListAPIView):
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Provides retrieve, update, and destroy operations for a user entity.
+    Handles detailed representation and manipulation of a single user's data.
 
-    This view handles requests for retrieving, updating, and deleting a user
-    based on their primary key (id). It uses permissions to allow unrestricted
-    access. The serializer and queryset ensure proper handling of CustomUser
-    objects. The `get_queryset` method allows filtering of the data to return
-    a user instance matching the request parameter.
+    This class-based view provides functionality to retrieve, update, or delete
+    a specific user instance. It ensures that only authenticated users are allowed
+    to access these operations using the specified permission classes. The view uses
+    the provided serializer class for data validation and transformation.
 
-    :ivar permission_classes: A list of permissions that define the access
-        level for the view.
+    :ivar permission_classes: List of permission classes to restrict access to
+                              authenticated users only.
     :type permission_classes: list
-    :ivar queryset: The base queryset representing all instances of CustomUser
-        objects in the database.
+    :ivar queryset: Base queryset used to look up user data in the database.
     :type queryset: QuerySet
-    :ivar serializer_class: The serializer used to handle validation and
-        transformation of CustomUser data.
+    :ivar serializer_class: Serializer class used to serialize and validate user data.
     :type serializer_class: Serializer
     """
     permission_classes = [permissions.IsAuthenticated]
@@ -134,21 +134,17 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
-    Provides a set of CRUD operations for Project model objects specifically
-    tailored to the authenticated contributors of projects.
+    Handles CRUD operations for project views utilizing a ModelViewSet.
 
-    This class supports retrieving, listing, creating, and updating projects.
-    The `get_queryset` method ensures that the queryset is filtered based on the
-    authenticated user's contributions. The serializer used depends on the
-    action performed (detail view or list view).
+    This class is used to provide a complete implementation of view handling for
+    the `Project` model using Django Rest Framework's `ModelViewSet`. This viewset
+    enforces authentication for all endpoints. It customizes the behavior of
+    queryset filtering, serializer selection, and object creation.
 
-    :ivar permission_classes: A list of permission classes enforcing that only
-        authenticated users can perform operations.
-    :type permission_classes: List[type]
-
-    :ivar queryset: Filtered queryset that includes only the projects the
-        authenticated user contributes to.
-    :type queryset: QuerySet
+    :ivar permission_classes: Specifies the permission classes that are applied to
+        all endpoints of this viewset. It enforces authentication for accessing
+        project data.
+    :type permission_classes: list
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -167,13 +163,47 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 
 class ContributorViewSet(viewsets.ModelViewSet):
+    """
+    Handles operations related to contributors in a project.
+
+    This class defines the behavior for listing, creating, retrieving, updating, and
+    deleting contributors associated with projects. It requires authenticated users to
+    interact with the API. Users can view contributors for projects they are associated
+    with. Only the author of a project is allowed to add new contributors to that project.
+
+    :ivar permission_classes: Defines the permission classes that ensure only
+        authenticated users can access this view.
+    :type permission_classes: list
+    :ivar serializer_class: Determines the serializer used for handling contributor data.
+    :type serializer_class: type
+    """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ContributorSerializer
 
     def get_queryset(self):
+        """
+        Filters and returns the queryset of Contributor objects that are related to the projects
+        where the currently authenticated user is listed as a contributor. This method is integral
+        to ensuring that only contributors related to the authenticated user's projects are fetched.
+
+        :return: A queryset of filtered Contributor objects.
+        :rtype: QuerySet
+        """
         return Contributor.objects.filter(project__contributors__user=self.request.user)
 
     def perform_create(self, serializer):
+        """
+        This method handles the creation of an object using the provided serializer. It ensures
+        that the user creating the object is authorized to do so based on the associated project's
+        author. If the requesting user is not the author of the project, a ValidationError is raised.
+        Once the validation process is completed successfully, the object is saved.
+
+        :param serializer: The serializer that contains the validated data for the object
+            to be created.
+        :return: None
+        :raises serializers.ValidationError: If the requesting user is not the author of
+            the project.
+        """
         project = serializer.validated_data["project"]
         if project.author != self.request.user:
             raise serializers.ValidationError("Seul l'auteur du projet peut ajouter des contributeurs.")
@@ -181,6 +211,19 @@ class ContributorViewSet(viewsets.ModelViewSet):
 
 
 class IssueViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for managing and interacting with Issue objects.
+
+    This class provides an interface to handle CRUD operations for the Issue model.
+    It restricts access to authenticated users and applies additional permissions to
+    ensure only the author or individuals with read-only permissions can interact with
+    the objects. The viewset also customizes serializers based on actions and validates
+    assigned contributors to issues.
+
+    :ivar permission_classes: List of permission classes applied to the viewset. It ensures
+        that the user is authenticated and adheres to the IsAuthorOrReadOnly permission rules.
+    :type permission_classes: list
+    """
     permission_classes = [permissions.IsAuthenticated, IsAuthorOrReadOnly]
 
     def get_queryset(self):
@@ -200,6 +243,18 @@ class IssueViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
+    """
+    Manages CRUD operations for comments related to issues in a project management system.
+
+    This class extends `viewsets.ModelViewSet`, allowing authenticated users to interact
+    with comments they are permitted to access. It filters comments by user permissions,
+    dynamically provides serializers based on the action, and ensures comments are created
+    with the correct author information.
+
+    :ivar permission_classes: List of permission classes to restrict access to authenticated
+                              users only.
+    :type permission_classes: list
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
