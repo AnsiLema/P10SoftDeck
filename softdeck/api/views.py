@@ -1,7 +1,9 @@
-from rest_framework import generics, permissions, viewsets, permissions, serializers
+from rest_framework import generics, viewsets, permissions, serializers, status
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import CustomUser, Project, Contributor, Issue, Comment
+from .permissions import IsContributor, IsAuthor
 from .serializers import UserSerializer, UserListSerializer, ProjectDetailSerializer, ProjectListSerializer, \
 ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, AuthUser
@@ -102,7 +104,7 @@ class UserListView(generics.ListAPIView):
         the user data.
     :type serializer_class: Serializer
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [AllowAny]
     queryset = CustomUser.objects.all()
     serializer_class = UserListSerializer
 
@@ -124,7 +126,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     :ivar serializer_class: Serializer class used to serialize and validate user data.
     :type serializer_class: Serializer
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
 
@@ -146,7 +148,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project data.
     :type permission_classes: list
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        """Applies 'IsContributor' to see and 'IsAuthor' to create, update and delete. """
+        return [AllowAny]
+
 
     def get_queryset(self):
         return Project.objects.filter(contributors__user=self.request.user)
@@ -157,10 +164,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
         else:
             return ProjectListSerializer
 
+"""
     def perform_create(self, serializer):
+        # DEBUG
+        
         project = serializer.save(author=self.request.user)
         Contributor.objects.create(user=self.request.user, project=project)
 
+    def perform_destroy(self, instance):
+        self.check_object_permissions(self.request, instance)
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+"""
 
 class ContributorViewSet(viewsets.ModelViewSet):
     """
@@ -177,7 +192,7 @@ class ContributorViewSet(viewsets.ModelViewSet):
     :ivar serializer_class: Determines the serializer used for handling contributor data.
     :type serializer_class: type
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
     serializer_class = ContributorSerializer
 
     def get_queryset(self):
@@ -224,7 +239,7 @@ class IssueViewSet(viewsets.ModelViewSet):
         that the user is authenticated and adheres to the IsAuthorOrReadOnly permission rules.
     :type permission_classes: list
     """
-    permission_classes = [permissions.IsAuthenticated, IsAuthorOrReadOnly]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return Issue.objects.filter(project__contributors__user=self.request.user)
@@ -255,7 +270,7 @@ class CommentViewSet(viewsets.ModelViewSet):
                               users only.
     :type permission_classes: list
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         return Comment.objects.filter(issue__project__contributors__user=self.request.user)

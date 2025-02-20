@@ -105,6 +105,12 @@ class ProjectListSerializer(serializers.ModelSerializer):
         model = Project
         fields = ('id', 'title', 'author')
 
+    def validate_project_title(self, value):
+        """ Checks if the project title is unique """
+        if Project.objects.filter(title=value).exists():
+            raise serializers.ValidationError("Un projet portant ce nom existe déja.")
+        return value
+
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
     author = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
@@ -112,6 +118,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ('id', 'title', 'description', 'type', 'author')
+
 
 # -------------------- CONTRIBUTOR SERIALIZER ---------------------- #
 
