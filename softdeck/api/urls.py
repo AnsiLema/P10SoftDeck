@@ -2,9 +2,10 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import CustomTokenObtainPairView, RegisterUserView, UserDetailView, UserListView, ProjectViewSet, \
     ContributorViewSet, IssueViewSet, CommentViewSet
-from rest_framework import routers
+from rest_framework.routers import DefaultRouter
 
-router = routers.DefaultRouter()
+
+router = DefaultRouter()
 router.register('projects', ProjectViewSet, basename='projects')
 router.register('contributors', ContributorViewSet, basename='contributors')
 router.register('issues', IssueViewSet, basename='issues')
@@ -21,4 +22,10 @@ urlpatterns = [
     path('users/', UserListView.as_view(), name='user-list'),
     path('users/<int:pk>/', UserDetailView.as_view(), name='user-detail'),
     path('', include(router.urls)),
+
+    # Contributors
+    path('projects/<int:project_pk>/contributors/', ContributorViewSet.as_view(
+        {'post': 'create', 'get': 'list'}), name='project-contributors'),
+    path('projects/<int:project_pk>/contributors/<int:contributor_pk>/', ContributorViewSet.as_view(
+        {'delete': 'destroy'}), name='project-contributor-delete'),
 ]

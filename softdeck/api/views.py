@@ -1,9 +1,12 @@
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, permissions, serializers, status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import CustomUser, Project, Contributor, Issue, Comment
-from .permissions import IsContributor, IsAuthor
+from .permissions import IsAuthor
 from .serializers import UserSerializer, UserListSerializer, ProjectDetailSerializer, ProjectListSerializer, \
 ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, AuthUser
@@ -11,16 +14,16 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Auth
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Custom serializer for obtaining a token pair.
+    CustomTokenObtainPairSerializer modifies the default TokenObtainPairSerializer class
+    to include additional user-specific information in the token. This class is used to
+    generate JWT tokens with custom claims.
 
-    This class extends the TokenObtainPairSerializer to include additional
-    custom claims in the token payload. It modifies the token to embed
-    the username of the authenticated user directly in the token, in addition
-    to the standard claims provided by the base serializer.
+    The main purpose of this class is to add the username of the authenticated user to
+    the token payload. This feature is useful when custom claims need to be included in
+    the JWT for various application-specific requirements.
 
-    :ivar token: Instance containing the generated token with standard
-        claims as well as additional custom claims.
-    :type token: dict
+    :ivar username: The username of the authenticated user that is added to the token payload.
+    :type username: str
     """
     @classmethod
     def get_token(cls, user):
@@ -31,31 +34,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Provides a customized view for obtaining JWT tokens.
+    Custom implementation of the TokenObtainPairView class.
 
-    This class extends the `TokenObtainPairView` to utilize a custom serializer
-    for generating JWT token pairs. The custom serializer can add additional
-    custom logic or include extra fields in the response. Useful for scenarios
-    where standard JWT generation needs to be tailored to application-specific
-    requirements.
+    This class is used to customize the functionality of the TokenObtainPairView class
+    by overriding its default serializer with a custom serializer. It enables extensions
+    or modifications to the default behavior of the token obtain pair process, such as
+    managing JWT tokens.
 
-    :ivar serializer_class: The serializer class responsible for customizing
-        the JWT token pair response.
-    :type serializer_class: Type[TokenObtainPairSerializer]
+    :ivar serializer_class: Custom serializer that will be used to handle the token
+        obtain pair process.
+    :type serializer_class: type
     """
     serializer_class = CustomTokenObtainPairSerializer
 
 
 class IsAuthorOrReadOnly(permissions.BasePermission):
     """
-    Permission class to allow read-only access for any user and write access only to the object's author.
+    Determines if the user has read-only access or is the author of the object.
 
-    This class details permission settings. It permits safe HTTP methods such as GET for all users while
-    restricting write actions like PUT, PATCH, and DELETE solely to the author of the object.
+    A custom permission class that grants read-only access to safe methods (such as GET, HEAD, OPTIONS)
+    for all users and allows modification only for the author of the object. This class can be used in
+    Django REST Framework for performing fine-grained permission checks on objects.
 
-    :ivar SAFE_METHODS: Tuple of safe HTTP methods (e.g., GET, HEAD, OPTIONS) that are accessible to
-        all users.
-    :type SAFE_METHODS: tuple
+    :ivar message: A custom error message returned when access is denied.
+    :type message: str
     """
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
@@ -65,20 +67,26 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
 
 class RegisterUserView(generics.CreateAPIView):
     """
-    Handles the creation of a new user account.
+    Handles user registration functionality.
 
-    This class provides functionality to register a new user by creating an entry
-    in the user database. It is a subclass of `generics.CreateAPIView` and
-    leverages its behavior to handle POST requests for creating user records.
-    It restricts access using the specified permissions and applies a serializer
-    to handle data validation and user creation logic.
+    This class provides an endpoint for creating user accounts. Users are
+    created using the provided serializer, which validates and saves the data.
+    It uses the AllowAny permission class, meaning no authentication or
+    authorization is required to access this endpoint. This class is a subclass
+    of CreateAPIView, which provides a basic implementation for creating
+    model instances.
 
-    :ivar permission_classes: List of permissions required to access this view.
-    :type permission_classes: list
-    :ivar queryset: Queryset specifying the set of records this view will act upon.
-    :type queryset: QuerySet
-    :ivar serializer_class: Serializer class used to validate and serialize input data.
-    :type serializer_class: Serializer
+    :ivar permission_classes: Specifies the permission classes applied to the
+        view. In this case, the view allows unrestricted access to all users.
+    :type permission_classes: list[rest_framework.permissions.AllowAny]
+
+    :ivar queryset: Represents the set of objects available to this view.
+        It uses all instances from the CustomUser model.
+    :type queryset: QuerySet[CustomUser]
+
+    :ivar serializer_class: Specifies the serializer used for validating and
+        saving user data during registration.
+    :type serializer_class: type[UserSerializer]
     """
     permission_classes = [AllowAny]
     queryset = CustomUser.objects.all()
@@ -87,22 +95,19 @@ class RegisterUserView(generics.CreateAPIView):
 
 class UserListView(generics.ListAPIView):
     """
-    Represents a view for listing user data.
+    Represents a view for listing all users.
 
-    This class-based view provides an interface for listing user data using
-    Django REST Framework. It utilizes generic ListAPIView to handle retrieval
-    of user data. Access to this view is restricted to users with admin
-    permissions. User data is serialized using a custom serializer.
+    This view provides an endpoint to retrieve a list of all users. Access to this
+    endpoint is unrestricted as it allows any user to access the data. It leverages
+    the Django Rest Framework's generic ListAPIView to simplify implementation.
+    The view works with a specified query set and serializer to format the data.
 
-    :ivar permission_classes: Specifies the permission classes required to
-        access this view.
+    :ivar permission_classes: Permissions to access the view.
     :type permission_classes: list
-    :ivar queryset: Defines the queryset to retrieve CustomUser objects
-        from the database.
+    :ivar queryset: Queryset defining the set of users to be listed.
     :type queryset: QuerySet
-    :ivar serializer_class: Specifies the serializer class used to serialize
-        the user data.
-    :type serializer_class: Serializer
+    :ivar serializer_class: Serializer used to format the user data.
+    :type serializer_class: serializers.Serializer
     """
     permission_classes = [AllowAny]
     queryset = CustomUser.objects.all()
@@ -111,20 +116,20 @@ class UserListView(generics.ListAPIView):
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Handles detailed representation and manipulation of a single user's data.
+    Provides functionality for retrieving, updating, or deleting a user's detail view.
 
-    This class-based view provides functionality to retrieve, update, or delete
-    a specific user instance. It ensures that only authenticated users are allowed
-    to access these operations using the specified permission classes. The view uses
-    the provided serializer class for data validation and transformation.
+    This class-based view allows interactions with the `CustomUser` model objects. It extends
+    `RetrieveUpdateDestroyAPIView` to provide operations for retrieving details, updating data,
+    or deleting a specific user instance. Permissions are configured to allow access to any user,
+    and the view utilizes a specific serializer for representation. Query filtering in this view
+    is implemented to retrieve a specific user by their primary key.
 
-    :ivar permission_classes: List of permission classes to restrict access to
-                              authenticated users only.
+    :ivar permission_classes: List of permissions required to interact with the view.
     :type permission_classes: list
-    :ivar queryset: Base queryset used to look up user data in the database.
+    :ivar queryset: Base queryset representing all ``CustomUser`` model instances.
     :type queryset: QuerySet
-    :ivar serializer_class: Serializer class used to serialize and validate user data.
-    :type serializer_class: Serializer
+    :ivar serializer_class: Serializer class used to serialize/deserialize ``CustomUser`` objects.
+    :type serializer_class: type
     """
     permission_classes = [AllowAny]
     queryset = CustomUser.objects.all()
@@ -136,23 +141,22 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
-    Handles CRUD operations for project views utilizing a ModelViewSet.
+    Represents a viewset for managing projects within the system.
 
-    This class is used to provide a complete implementation of view handling for
-    the `Project` model using Django Rest Framework's `ModelViewSet`. This viewset
-    enforces authentication for all endpoints. It customizes the behavior of
-    queryset filtering, serializer selection, and object creation.
+    Provides functionality for retrieving, creating, updating, and deleting
+    projects. Integrates with different serializers based on the action being
+    performed. The queryset is filtered to display projects associated only
+    with the currently authenticated user through their contributor role.
 
-    :ivar permission_classes: Specifies the permission classes that are applied to
-        all endpoints of this viewset. It enforces authentication for accessing
-        project data.
+    :ivar permission_classes: The default permission classes used within
+        the viewset. Defines access permissions for requests.
     :type permission_classes: list
     """
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
         """Applies 'IsContributor' to see and 'IsAuthor' to create, update and delete. """
-        return [AllowAny]
+        return [permissions.AllowAny()]
 
 
     def get_queryset(self):
@@ -179,18 +183,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 class ContributorViewSet(viewsets.ModelViewSet):
     """
-    Handles operations related to contributors in a project.
+    Provides a viewset to manage project contributors, allowing operations such as listing,
+    creating, and deleting contributor objects associated with specific projects. This
+    viewset is tailored to ensure that only authorized users can perform specific actions.
 
-    This class defines the behavior for listing, creating, retrieving, updating, and
-    deleting contributors associated with projects. It requires authenticated users to
-    interact with the API. Users can view contributors for projects they are associated
-    with. Only the author of a project is allowed to add new contributors to that project.
+    Permissions and serializers are explicitly defined to integrate with Django Rest Framework.
+    The viewset also incorporates project-specific filtering and validation for creating
+    and deleting contributors.
 
-    :ivar permission_classes: Defines the permission classes that ensure only
-        authenticated users can access this view.
+    :ivar permission_classes: Defines the permission class for the viewset to allow unrestricted
+        access to its endpoints.
     :type permission_classes: list
-    :ivar serializer_class: Determines the serializer used for handling contributor data.
-    :type serializer_class: type
+    :ivar serializer_class: Specifies the serializer class used to validate and serialize contributor
+        data.
+    :type serializer_class: ContributorSerializer
     """
     permission_classes = [AllowAny]
     serializer_class = ContributorSerializer
@@ -204,7 +210,8 @@ class ContributorViewSet(viewsets.ModelViewSet):
         :return: A queryset of filtered Contributor objects.
         :rtype: QuerySet
         """
-        return Contributor.objects.filter(project__contributors__user=self.request.user)
+        project_id = self.kwargs.get('project_pk')
+        return Contributor.objects.filter(project_id=project_id)
 
     def perform_create(self, serializer):
         """
@@ -219,24 +226,79 @@ class ContributorViewSet(viewsets.ModelViewSet):
         :raises serializers.ValidationError: If the requesting user is not the author of
             the project.
         """
-        project = serializer.validated_data["project"]
+        project_id = self.kwargs.get("project_pk")
+        project = get_object_or_404(Project, id=project_id)
+
+        # Vérifie que seul l'auteur peut ajouter un contributeur
         if project.author != self.request.user:
-            raise serializers.ValidationError("Seul l'auteur du projet peut ajouter des contributeurs.")
-        serializer.save()
+            return Response({"error": "Seul l'auteur du projet peut ajouter des contributeurs."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        # Vérifie si l'utilisateur est déjà contributeur
+        user = serializer.validated_data["user"]
+        if Contributor.objects.filter(user=user, project=project).exists():
+            raise ValidationError("Cet utilisateur est déjà contributeur du projet.")
+
+        serializer.save(project=project)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Deletes a contributor from a specified project after validating the user permissions and
+        the existence of the contributor within the project. Only the author of the project is
+        authorized to perform this action. If either the project or the contributor does not exist
+        or if the user is unauthorized, an appropriate error is returned.
+
+        :param request: The HTTP request object containing the user performing the delete operation.
+        :param args: Additional positional arguments passed to the method.
+        :param kwargs: Additional keyword arguments passed to the method.
+        :return: A Response object indicating either the success or failure of the operation.
+        :rtype: Response
+
+        :raises NotFound: If the specified project or contributor does not exist for the given project.
+        :raises status.HTTP_403_FORBIDDEN: If the user is not the author of the project.
+        """
+        project_id = self.kwargs.get("project_pk")  # ID du projet
+        contributor_id = self.kwargs.get("contributor_pk")  # ID du contributeur
+
+        # DEBUG
+        print(f"project_id: {project_id}, contributor_id: {contributor_id}")
+
+        # Vérifier que le projet existe
+        project = get_object_or_404(Project, id=project_id)
+
+        # DEBUG
+        print(f"Project trouvé: {project.title}")
+
+        # Vérifier que seul l'auteur du projet peut supprimer un contributeur
+        if project.author != request.user:
+            return Response({"error": "Seul l'auteur du projet peut supprimer un contributeur."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+
+
+        # Vérifier que le contributeur existe pour ce projet
+        contributor = Contributor.objects.filter(id=contributor_id, project_id=project_id).first()
+        if not contributor:
+            # DEBUG
+            print(f"Contributeur avec ID {contributor_id} n'existe pas pour ce projet.")
+            raise NotFound({"error": "Ce contributeur n'existe pas pour ce projet."})
+
+        print(f"Contributeur trouvé: {contributor.user.username}")
+
+        # Suppression du contributeur
+        contributor.delete()
+        return Response({"message": "Contributeur supprimé avec succès."}, status=status.HTTP_204_NO_CONTENT)
 
 
 class IssueViewSet(viewsets.ModelViewSet):
     """
-    A viewset for managing and interacting with Issue objects.
+    This class represents a view set for managing issue instances in a project-based system.
 
-    This class provides an interface to handle CRUD operations for the Issue model.
-    It restricts access to authenticated users and applies additional permissions to
-    ensure only the author or individuals with read-only permissions can interact with
-    the objects. The viewset also customizes serializers based on actions and validates
-    assigned contributors to issues.
+    It provides API functionality for viewing, creating, and retrieving issues associated with
+    specific projects. The class enforces access control policies and ensures data consistency
+    through validation during operations.
 
-    :ivar permission_classes: List of permission classes applied to the viewset. It ensures
-        that the user is authenticated and adheres to the IsAuthorOrReadOnly permission rules.
+    :ivar permission_classes: List of permission classes applied to the view set.
     :type permission_classes: list
     """
     permission_classes = [AllowAny]
@@ -259,15 +321,16 @@ class IssueViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     """
-    Manages CRUD operations for comments related to issues in a project management system.
+    Handles operations related to comments using a ModelViewSet.
 
-    This class extends `viewsets.ModelViewSet`, allowing authenticated users to interact
-    with comments they are permitted to access. It filters comments by user permissions,
-    dynamically provides serializers based on the action, and ensures comments are created
-    with the correct author information.
+    This class provides CRUD operations for managing comments. It determines
+    the appropriate queryset based on the authenticated user and dynamically
+    assigns the serializer class depending on the action being performed.
+    Also, it automatically associates the author of the comment with the
+    current authenticated user during creation.
 
-    :ivar permission_classes: List of permission classes to restrict access to authenticated
-                              users only.
+    :ivar permission_classes: Permission classes that control access to the
+        viewset. Defaults to AllowAny, allowing unrestricted access.
     :type permission_classes: list
     """
     permission_classes = [AllowAny]
