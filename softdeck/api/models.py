@@ -95,9 +95,10 @@ class Issue(models.Model):
     description = models.TextField(blank=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES)
     tag = models.CharField(max_length=10, choices=TAG_CHOICES)
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default="TODO")
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="issues")
-    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="assigned_issues")
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE,
+                                    related_name="assigned_issues")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_issues")
     created_time = models.DateTimeField(auto_now_add=True)
 

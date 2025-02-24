@@ -260,14 +260,9 @@ class ContributorViewSet(viewsets.ModelViewSet):
         project_id = self.kwargs.get("project_pk")  # ID du projet
         contributor_id = self.kwargs.get("contributor_pk")  # ID du contributeur
 
-        # DEBUG
-        print(f"project_id: {project_id}, contributor_id: {contributor_id}")
-
         # Vérifier que le projet existe
         project = get_object_or_404(Project, id=project_id)
 
-        # DEBUG
-        print(f"Project trouvé: {project.title}")
 
         # Vérifier que seul l'auteur du projet peut supprimer un contributeur
         if project.author != request.user:
@@ -279,11 +274,7 @@ class ContributorViewSet(viewsets.ModelViewSet):
         # Vérifier que le contributeur existe pour ce projet
         contributor = Contributor.objects.filter(id=contributor_id, project_id=project_id).first()
         if not contributor:
-            # DEBUG
-            print(f"Contributeur avec ID {contributor_id} n'existe pas pour ce projet.")
             raise NotFound({"error": "Ce contributeur n'existe pas pour ce projet."})
-
-        print(f"Contributeur trouvé: {contributor.user.username}")
 
         # Suppression du contributeur
         contributor.delete()
@@ -304,19 +295,27 @@ class IssueViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return Issue.objects.filter(project__contributors__user=self.request.user)
+        project_id = self.kwargs.get('project_pk')
+        issue_id = self.kwargs.get("pk")
+
+        if issue_id:
+            return Issue.objects.filter(project_id=project_id, id=issue_id)
+        return Issue.objects.filter(project_id=project_id)
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return IssueDetailSerializer
-        else:
-            return IssueListSerializer
+        return IssueListSerializer
 
     def perform_create(self, serializer):
-        issue = serializer.save(author=self.request.user)
-        if issue.assigned_to and not Contributor.objects.filter(user=issue.assigned_to,
-                                                                project=issue.project).exists():
-            raise serializers.ValidationError("L'utilisateur n'est pas un contributeur du projet.")
+        project_id = self.kwargs.get("project_pk")
+        project = get_object_or_404(Project, id=project_id)
+
+        assigned_to = serializer.validated_data.get("assigned_to")
+        if assigned_to and not Contributor.objects.filter(user=assigned_to, project=project).exists():
+            raise serializers.ValidationError("L'utilisateur assigné doit être un contributeur du projet.")
+
+        serializer.save(author=self.request.user, project=project)
 
 
 class CommentViewSet(viewsets.ModelViewSet):

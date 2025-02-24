@@ -133,7 +133,7 @@ class ContributorSerializer(serializers.ModelSerializer):
 # ------------------------ ISSUE SERIALIZER ------------------------- #
 
 class IssueDetailSerializer(serializers.ModelSerializer):
-    author = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
     assigned_to = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
 
     class Meta:
@@ -141,14 +141,23 @@ class IssueDetailSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'description', 'priority', 'tag', 'status',
                   'project', 'assigned_to', 'author', 'created_time')
 
+    def validate_assigned_to(self, value):
+        """ Checks that the assigned user is a project contributor """
+        project = self.instance.project if self.instance else self.initial_data.get("project")
+        if not Contributor.objects.filter(project=project, user=value).exists():
+            raise serializers.ValidationError("L'utilisateur assigné doit être contributeur du projet.")
+        return value
+
+
+
 
 class IssueListSerializer(serializers.ModelSerializer):
-    author = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
     assigned_to = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
 
     class Meta:
         model = Issue
-        fields = ('id', 'title', 'priority', 'tag', 'status',)
+        fields = ('id', 'title', 'priority', 'author', 'tag', 'status', 'assigned_to')
 
 # ------------------------ COMMENT SERIALIZER ------------------------- #
 
