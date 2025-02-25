@@ -1,16 +1,42 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from .models import Contributor, Project
 
 
-class IsAuthor(BasePermission):
+class IsAuthorOrReadOnly(BasePermission):
+    """
+    Provides permission logic to allow read-only access to all users and
+    restrict write permissions exclusively to the author of the object.
+
+    This permission class is suitable for scenarios where authenticated
+    users can read or retrieve any object, but only the author can modify
+    or delete it.
+
+    :ivar SAFE_METHODS: A set of HTTP methods considered safe (e.g., GET, HEAD, OPTIONS).
+    :type SAFE_METHODS: set
+    """
     def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        # Only Author can modify or delete the object
         return obj.author == request.user
 
+
+class IsContributor(BasePermission):
+    """
+    Custom permission class to check if a user is a contributor to a given project.
+
+    The purpose of this class is to ensure access control by allowing actions only to users
+    who are contributors of a specified project. The permission is determined based on the
+    `project_pk` obtained from the view's keyword arguments and checks the existence of
+    an association between the user and the project in the Contributor model.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Seuls les utilisateurs qui sont contributeurs du projet peuvent y accéder
+        return request.user in [contributor.user for contributor in obj.contributors.all()]
+
+
+class IsProjectAuthor(BasePermission):
     def has_permission(self, request, view):
-        project_id = view.kwargs.get('pk')
-        if project_id:
-            project = Project.objects.get(pk=project_id)
-            return project.author == request.user
-        return False
-
-
+        project_id = view.kwargs.get("project_pk")
+        project = Project.objects.filter(id=project_id).first()
+        return project and project.author == request.user

@@ -2,11 +2,11 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, permissions, serializers, status
 from rest_framework.exceptions import NotFound
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import CustomUser, Project, Contributor, Issue, Comment
-from .permissions import IsAuthor
+from .permissions import IsAuthorOrReadOnly, IsContributor, IsProjectAuthor
 from .serializers import UserSerializer, UserListSerializer, ProjectDetailSerializer, ProjectListSerializer, \
 ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, AuthUser
@@ -46,23 +46,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     :type serializer_class: type
     """
     serializer_class = CustomTokenObtainPairSerializer
-
-
-class IsAuthorOrReadOnly(permissions.BasePermission):
-    """
-    Determines if the user has read-only access or is the author of the object.
-
-    A custom permission class that grants read-only access to safe methods (such as GET, HEAD, OPTIONS)
-    for all users and allows modification only for the author of the object. This class can be used in
-    Django REST Framework for performing fine-grained permission checks on objects.
-
-    :ivar message: A custom error message returned when access is denied.
-    :type message: str
-    """
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True # Allows GET
-        return obj.author == request.user # Allows PUT, PATCH, DELETE to the author
 
 
 class RegisterUserView(generics.CreateAPIView):
@@ -152,12 +135,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         the viewset. Defines access permissions for requests.
     :type permission_classes: list
     """
-    permission_classes = [permissions.AllowAny]
-
-    def get_permissions(self):
-        """Applies 'IsContributor' to see and 'IsAuthor' to create, update and delete. """
-        return [permissions.AllowAny()]
-
+    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly, IsContributor]
 
     def get_queryset(self):
         return Project.objects.filter(contributors__user=self.request.user)
@@ -168,18 +146,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         else:
             return ProjectListSerializer
 
-"""
-    def perform_create(self, serializer):
-        # DEBUG
-        
-        project = serializer.save(author=self.request.user)
-        Contributor.objects.create(user=self.request.user, project=project)
-
-    def perform_destroy(self, instance):
-        self.check_object_permissions(self.request, instance)
-        instance.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-"""
 
 class ContributorViewSet(viewsets.ModelViewSet):
     """
@@ -198,7 +164,7 @@ class ContributorViewSet(viewsets.ModelViewSet):
         data.
     :type serializer_class: ContributorSerializer
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsProjectAuthor]
     serializer_class = ContributorSerializer
 
     def get_queryset(self):
@@ -292,7 +258,7 @@ class IssueViewSet(viewsets.ModelViewSet):
     :ivar permission_classes: List of permission classes applied to the view set.
     :type permission_classes: list
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthorOrReadOnly]
 
     def get_queryset(self):
         project_id = self.kwargs.get('project_pk')
@@ -332,7 +298,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         viewset. Defaults to AllowAny, allowing unrestricted access.
     :type permission_classes: list
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthorOrReadOnly]
 
     def get_queryset(self):
         issue_id = self.kwargs.get('issue_pk')
