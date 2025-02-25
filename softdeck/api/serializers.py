@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser, Project, Contributor, Issue, Comment
 from django.contrib.auth import get_user_model
+from datetime import date
 
 
 # ---------------------- USER SERIALIZERS ----------------------- #
@@ -29,6 +30,18 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'password', 'birth_date', 'can_be_contacted', 'can_data_be_shared')
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'birth_date': {'required': True}  # 🚀 Rend obligatoire dans l'API
+        }
+
+    def validate_birth_date(self, value):
+        """ Vérifie que l'utilisateur a au moins 15 ans. """
+        today = date.today()
+        age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+        if age < 15:
+            raise serializers.ValidationError("Vous devez avoir au moins 15 ans pour vous inscrire.")
+        return value
 
     def create(self, validated_data):
         """
@@ -163,18 +176,20 @@ class IssueListSerializer(serializers.ModelSerializer):
 
 
 class CommentDetailSerializer(serializers.ModelSerializer):
-    author = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
     issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.all())
 
     class Meta:
         model = Comment
         fields = ('id', 'description', 'author', 'issue', 'created_time')
+        extra_kwargs = {'id': {'read_only': True}}
 
 
 class CommentListSerializer(serializers.ModelSerializer):
-    author = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
-    issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.all())
+    author = serializers.PrimaryKeyRelatedField(read_only=True, source='author.id')
+    # issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.all())
 
     class Meta:
         model = Comment
         fields = ('id', 'description', 'author')
+        extra_kwargs = {'id': {'read_only': True}}

@@ -42,6 +42,14 @@ class CustomUser(AbstractUser):
     can_be_contacted = models.BooleanField(default=False)
     can_data_be_shared = models.BooleanField(default=False)
 
+    def clean(self):
+        if self.birth_date:
+            validate_age(self.birth_date) # Extra Validation
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.username
 

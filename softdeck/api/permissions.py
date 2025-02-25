@@ -14,13 +14,3 @@ class IsAuthor(BasePermission):
         return False
 
 
-"""
-class IsContributor(BasePermission):
-    def has_permission(self, request, view):
-        project_id = view.kwargs.get('pk')
-
-        if project_id:
-            return Contributor.objects.filter(user=request.user, project_id=project_id).exists()
-
-        return False
-"""

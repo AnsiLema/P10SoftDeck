@@ -10,7 +10,7 @@ from .permissions import IsAuthor
 from .serializers import UserSerializer, UserListSerializer, ProjectDetailSerializer, ProjectListSerializer, \
 ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, AuthUser
-
+from uuid import UUID
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
@@ -296,7 +296,7 @@ class IssueViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         project_id = self.kwargs.get('project_pk')
-        issue_id = self.kwargs.get("pk")
+        issue_id = self.kwargs.get("issue_pk")
 
         if issue_id:
             return Issue.objects.filter(project_id=project_id, id=issue_id)
@@ -335,13 +335,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return Comment.objects.filter(issue__project__contributors__user=self.request.user)
+        issue_id = self.kwargs.get('issue_pk')
+        return Comment.objects.filter(issue_id=issue_id)
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action in ['retrieve', 'update', 'partial_update']:
             return CommentDetailSerializer
-        else:
-            return CommentListSerializer
+        return CommentListSerializer
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        issue_id = self.kwargs.get("issue_pk")
+        issue = get_object_or_404(Issue, id=issue_id)
+
+        serializer.save(author=self.request.user, issue=issue)
