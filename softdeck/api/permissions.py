@@ -10,14 +10,10 @@ class IsAuthorOrReadOnly(BasePermission):
     This permission class is suitable for scenarios where authenticated
     users can read or retrieve any object, but only the author can modify
     or delete it.
-
-    :ivar SAFE_METHODS: A set of HTTP methods considered safe (e.g., GET, HEAD, OPTIONS).
-    :type SAFE_METHODS: set
     """
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        # Only Author can modify or delete the object
         return obj.author == request.user
 
 
@@ -31,7 +27,7 @@ class IsContributor(BasePermission):
     an association between the user and the project in the Contributor model.
     """
     def has_object_permission(self, request, view, obj):
-        # Seuls les utilisateurs qui sont contributeurs du projet peuvent y accéder
+        # Only users who are contributors to the project can access it.
         return request.user in [contributor.user for contributor in obj.contributors.all()]
 
 

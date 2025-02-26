@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, viewsets, permissions, serializers, status
+from rest_framework import generics, viewsets, serializers, status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -9,8 +9,7 @@ from .models import CustomUser, Project, Contributor, Issue, Comment
 from .permissions import IsAuthorOrReadOnly, IsContributor, IsProjectAuthor
 from .serializers import UserSerializer, UserListSerializer, ProjectDetailSerializer, ProjectListSerializer, \
 ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, AuthUser
-from uuid import UUID
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
@@ -21,9 +20,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     The main purpose of this class is to add the username of the authenticated user to
     the token payload. This feature is useful when custom claims need to be included in
     the JWT for various application-specific requirements.
-
-    :ivar username: The username of the authenticated user that is added to the token payload.
-    :type username: str
     """
     @classmethod
     def get_token(cls, user):
@@ -195,12 +191,12 @@ class ContributorViewSet(viewsets.ModelViewSet):
         project_id = self.kwargs.get("project_pk")
         project = get_object_or_404(Project, id=project_id)
 
-        # Vérifie que seul l'auteur peut ajouter un contributeur
+        # Check that only the author can add a contributor
         if project.author != self.request.user:
             return Response({"error": "Seul l'auteur du projet peut ajouter des contributeurs."},
                             status=status.HTTP_403_FORBIDDEN)
 
-        # Vérifie si l'utilisateur est déjà contributeur
+        # Checks if the user is already a contributor
         user = serializer.validated_data["user"]
         if Contributor.objects.filter(user=user, project=project).exists():
             raise ValidationError("Cet utilisateur est déjà contributeur du projet.")

@@ -36,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def validate_birth_date(self, value):
-        """ Vérifie que l'utilisateur a au moins 15 ans. """
+        """ Checks that user is at least 15 years old. """
         today = date.today()
         age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
         if age < 15:
@@ -187,7 +187,6 @@ class CommentDetailSerializer(serializers.ModelSerializer):
 
 class CommentListSerializer(serializers.ModelSerializer):
     author = serializers.PrimaryKeyRelatedField(read_only=True, source='author.id')
-    # issue = serializers.PrimaryKeyRelatedField(queryset=Issue.objects.all())
 
     class Meta:
         model = Comment
