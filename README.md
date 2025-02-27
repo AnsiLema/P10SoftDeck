@@ -6,8 +6,12 @@ Voici le fichier `README.md` mis à jour selon tes demandes :
 Ce projet est une API REST basée sur Django et Django REST Framework (DRF) qui permet la gestion de projets, de contributeurs, de problèmes (issues) et de commentaires.
 
 ---
+```
 
 ## 📦 Installation et Configuration
+
+
+---
 
 ### 1️⃣ Cloner le projet
 
