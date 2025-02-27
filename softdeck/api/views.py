@@ -88,7 +88,7 @@ class UserListView(generics.ListAPIView):
     :ivar serializer_class: Serializer used to format the user data.
     :type serializer_class: serializers.Serializer
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = CustomUser.objects.all()
     serializer_class = UserListSerializer
 
@@ -110,7 +110,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     :ivar serializer_class: Serializer class used to serialize/deserialize ``CustomUser`` objects.
     :type serializer_class: type
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
 
@@ -134,13 +134,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAuthorOrReadOnly, IsContributor]
 
     def get_queryset(self):
-        return Project.objects.filter(contributors__user=self.request.user)
+        return Project.objects.filter(contributors__user=self.request.user
+                                      ) | Project.objects.filter(author=self.request.user)
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return ProjectDetailSerializer
         else:
             return ProjectListSerializer
+
+    def perform_create(self, serializer):
+        project = serializer.save(author=self.request.user)
+        # Adds author as contributor
+        Contributor.objects.create(user=self.request.user, project=project)
 
 
 class ContributorViewSet(viewsets.ModelViewSet):

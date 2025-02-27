@@ -12,8 +12,8 @@ Ce projet est une API REST basée sur Django et Django REST Framework (DRF) qui 
 ### 1️⃣ Cloner le projet
 
 ```bash
-git clone https://github.com/votre-repository.git
-cd votre-repository
+git clone https://github.com/AnsiLema/P10SoftDeck.git
+cd P10SoftDeck
 ```
 
 ---
@@ -36,11 +36,6 @@ env\Scripts\activate     # Sur Windows
 pip install -r requirements.txt
 ```
 
-Si `requirements.txt` n'existe pas, vous pouvez le générer avec :
-
-```bash
-pip freeze > requirements.txt
-```
 
 ---
 
@@ -57,19 +52,10 @@ python manage.py migrate
 
 ---
 
-### 5️⃣ Créer un superutilisateur
-
-```bash
-python manage.py createsuperuser
-```
-
-Suivez les instructions et entrez un nom d'utilisateur, une adresse e-mail et un mot de passe.
-
----
-
 ## 🚀 Lancer le serveur
 
 ```bash
+cd SoftDeck/
 python manage.py runserver
 ```
 
@@ -106,25 +92,11 @@ Vous recevrez un token JWT en réponse :
   "access": "token_access"
 }
 ```
-
+Copiez le token access.
 Ajoutez ce token dans l’en-tête de vos requêtes :
 
 ```
 Authorization: Bearer <votre_token_access>
-```
-
-### 🔹 Rafraîchir un token
-
-```
-POST /token/refresh/
-```
-
-Avec :
-
-```json
-{
-  "refresh": "votre_refresh_token"
-}
 ```
 
 ---
