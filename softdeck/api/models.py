@@ -6,6 +6,7 @@ from datetime import date
 from django.conf import settings
 import uuid
 
+
 def validate_age(birth_date):
     """
     Validates if the user's age is at least 15 years old based on their birth_date.
@@ -20,6 +21,7 @@ def validate_age(birth_date):
     age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
     if age < 15:
         raise ValidationError(_("L'utilisateur doit avoir au moins 15 ans."))
+
 
 class CustomUser(AbstractUser):
     """
@@ -44,7 +46,7 @@ class CustomUser(AbstractUser):
 
     def clean(self):
         if self.birth_date:
-            validate_age(self.birth_date) # Extra Validation
+            validate_age(self.birth_date)  # Extra Validation
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -123,4 +125,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Commentaire de {self.author.username} sur l'issue {self.issue.title}"
-

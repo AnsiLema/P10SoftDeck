@@ -31,11 +31,11 @@ urlpatterns = [
     path('projects/<int:project_pk>/issues/', IssueViewSet.as_view({'post': 'create', 'get': "list"}),
          name='project-issues'),
     path('projects/<int:project_pk>/issues/<int:issue_pk>/', IssueViewSet.as_view(
-        {'get': 'retrieve', 'patch': 'partial_update' , 'delete': 'destroy'}), name='project-issue-detail'),
+        {'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}), name='project-issue-detail'),
 
     # Comments
     path('projects/<int:project_pk>/issues/<int:issue_pk>/comments/',
-         CommentViewSet.as_view({'post': 'create', 'get': 'list'}),name='issue-comments'),
+         CommentViewSet.as_view({'post': 'create', 'get': 'list'}), name='issue-comments'),
     path('projects/<int:project_pk>/issues/<int:issue_pk>/comments/<uuid:pk>/',
          CommentViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}),
          name='issue-comment-detail'),

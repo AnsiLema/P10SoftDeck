@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser, Project, Contributor, Issue, Comment
-from django.contrib.auth import get_user_model
 from datetime import date
 
 
@@ -145,6 +144,7 @@ class ContributorSerializer(serializers.ModelSerializer):
 
 # ------------------------ ISSUE SERIALIZER ------------------------- #
 
+
 class IssueDetailSerializer(serializers.ModelSerializer):
     author = serializers.PrimaryKeyRelatedField(read_only=True)
     assigned_to = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())
@@ -160,8 +160,6 @@ class IssueDetailSerializer(serializers.ModelSerializer):
         if not Contributor.objects.filter(project=project, user=value).exists():
             raise serializers.ValidationError("L'utilisateur assigné doit être contributeur du projet.")
         return value
-
-
 
 
 class IssueListSerializer(serializers.ModelSerializer):

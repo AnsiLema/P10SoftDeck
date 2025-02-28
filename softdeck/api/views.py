@@ -8,8 +8,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import CustomUser, Project, Contributor, Issue, Comment
 from .permissions import IsAuthorOrReadOnly, IsContributor, IsProjectAuthor
 from .serializers import UserSerializer, UserListSerializer, ProjectDetailSerializer, ProjectListSerializer, \
-ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
+    ContributorSerializer, IssueDetailSerializer, IssueListSerializer, CommentListSerializer, CommentDetailSerializer
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
@@ -231,13 +232,10 @@ class ContributorViewSet(viewsets.ModelViewSet):
         # Vérifier que le projet existe
         project = get_object_or_404(Project, id=project_id)
 
-
         # Vérifier que seul l'auteur du projet peut supprimer un contributeur
         if project.author != request.user:
             return Response({"error": "Seul l'auteur du projet peut supprimer un contributeur."},
                             status=status.HTTP_403_FORBIDDEN)
-
-
 
         # Vérifier que le contributeur existe pour ce projet
         contributor = Contributor.objects.filter(id=contributor_id, project_id=project_id).first()
