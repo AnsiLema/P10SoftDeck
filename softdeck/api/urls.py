@@ -30,7 +30,7 @@ urlpatterns = [
     # Issues
     path('projects/<int:project_pk>/issues/', IssueViewSet.as_view({'post': 'create', 'get': "list"}),
          name='project-issues'),
-    path('projects/<int:project_pk>/issues/<int:issue_pk>/', IssueViewSet.as_view(
+    path('projects/<int:project_pk>/issues/<int:pk>/', IssueViewSet.as_view(
         {'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}), name='project-issue-detail'),
 
     # Comments

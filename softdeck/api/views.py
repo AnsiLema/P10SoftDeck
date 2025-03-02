@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, serializers, status
 from rest_framework.exceptions import NotFound
@@ -135,8 +136,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAuthorOrReadOnly, IsContributor]
 
     def get_queryset(self):
-        return Project.objects.filter(contributors__user=self.request.user
-                                      ) | Project.objects.filter(author=self.request.user)
+        return Project.objects.filter(
+            Q(contributors__user=self.request.user) | Q(author=self.request.user)
+        ).distinct()
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
