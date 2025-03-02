@@ -1,14 +1,14 @@
 Voici le fichier `README.md` mis à jour selon tes demandes :
 
 ```markdown
-# 📌 Projet Django REST API
+# Projet Django REST API
 
 Ce projet est une API REST basée sur Django et Django REST Framework (DRF) qui permet la gestion de projets, de contributeurs, de problèmes (issues) et de commentaires.
 
 ---
 ```
 
-## 📦 Installation et Configuration
+## Installation et Configuration
 
 
 ---
@@ -56,7 +56,7 @@ python manage.py migrate
 
 ---
 
-## 🚀 Lancer le serveur
+## Lancer le serveur
 
 ```bash
 cd SoftDeck/
@@ -67,7 +67,7 @@ L'API est maintenant accessible à l'adresse : [http://127.0.0.1:8000/](http://1
 
 ---
 
-## 🔑 Authentification
+## Authentification
 
 L'API utilise JSON Web Tokens (JWT) pour l'authentification.
 
@@ -83,7 +83,7 @@ Avec les identifiants d'un utilisateur enregistré :
 
 ```json
 {
-  "username": "admin",
+  "username": "utilisateur",
   "password": "motdepasse"
 }
 ```
@@ -105,7 +105,7 @@ Authorization: Bearer <votre_token_access>
 
 ---
 
-## 📌 Endpoints de l'API
+## Endpoints de l'API
 
 ### 🔹 Gestion des utilisateurs
 
@@ -165,7 +165,7 @@ Authorization: Bearer <votre_token_access>
 
 ---
 
-## 📌 Technologies utilisées
+## Technologies utilisées
 
 - **Django** : Framework web pour le backend.
 - **Django REST Framework** : Pour créer des API RESTful.
@@ -174,7 +174,7 @@ Authorization: Bearer <votre_token_access>
 
 ---
 
-## 📩 Contact
+## Contact
 
 Si vous avez des questions ou des suggestions, n'hésitez pas à m'envoyer un email : ansilema@gmail.com ! 🚀
 
